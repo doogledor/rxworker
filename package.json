@@ -1,0 +1,29 @@
+{
+  "name": "rxworker",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@reactivex/ix-ts": "^4.5.2",
+    "ix": "^4.5.2",
+    "lodash-es": "^4.17.21",
+    "react": "^17.0.0",
+    "react-dom": "^17.0.0",
+    "rxjs": "^7.4.0",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "@types/lodash-es": "^4.17.5",
+    "@types/react": "^17.0.0",
+    "@types/react-dom": "^17.0.0",
+    "@types/uuid": "^8.3.1",
+    "@vitejs/plugin-react": "^1.0.0",
+    "prettier": "^2.4.1",
+    "typescript": "^4.3.2",
+    "utility-types": "^3.10.0",
+    "vite": "^2.6.0"
+  }
+}
