@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import logo from './logo.svg'
 import './App.css'
-import { setupRxFlux } from './rx'
+import { setupRxFlux, setupRxWorkerFlux } from './rx'
 import { TopicIds } from './rx/data/topics'
 
 function Sub() {
     const [assetPose, setAssetPose] = useState('')
     const [trackState, setTrackState] = useState('')
-    const rxFlux = useRef(setupRxFlux())
     useEffect(() => {
-        const s1 = rxFlux.current.subscribe(
+        const rxFlux = setupRxFlux()
+        const rxWorkerFlux = setupRxWorkerFlux()
+        const s1 = rxFlux.subscribe(
             {
                 assetId2: ['abc', '123'],
                 topicId: TopicIds.ASSET_POSE,
@@ -20,7 +21,7 @@ function Sub() {
                 setAssetPose(JSON.stringify([...data.values()]))
             }
         )
-        const s2 = rxFlux.current.subscribe(
+        const s2 = rxWorkerFlux.subscribe(
             {
                 assetId2: ['XYZ', '987'],
                 topicId: TopicIds.TRACK_STATE,
@@ -34,6 +35,8 @@ function Sub() {
         return () => {
             s1()
             s2()
+            rxFlux.terminate()
+            rxWorkerFlux.terminate()
         }
     }, [])
 

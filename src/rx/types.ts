@@ -7,7 +7,10 @@ export type IQuery = {
 }
 export type AssetId2 = string
 export type UUId = string
-export type AllOutputs = Map<AssetId2, TopicData['payload']>
+export type FluxKey = string
+export type AllOutput = { uuid: UUId; payload: TopicData['payload'] }
+
+export type AllOutputs = Map<FluxKey, AllOutput>
 type Topic = NonNullable<IQuery>
 
 export interface IQueryRegister {

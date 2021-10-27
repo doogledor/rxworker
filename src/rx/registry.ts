@@ -1,51 +1,32 @@
 import { Observable, Subject } from 'rxjs'
 import { v4 } from 'uuid'
 import { scan, throttleTime } from 'rxjs/operators'
-import { IQuery, IQueryRegister, UUId, AllOutputs } from './types'
+import { IQuery, IQueryRegister, UUId, AllOutputs, AllOutput } from './types'
 import { TopicConfig, TopicIds, topicMap } from './data/topics'
 import { from } from 'ix/iterable'
 import { map } from 'ix/iterable/operators/map'
 import { filter } from 'ix/iterable/operators/filter'
 import { Flux } from './flux'
-import { flushSync } from 'react-dom'
 
-export const setupRegistry = () => {
-    let flux: Flux
+export const setupRegistry = ({ command }: { command?: Subject<any> }) => {
     const topicToUUId: Map<TopicIds, Set<UUId>> = new Map()
     const UUIdToTopic: Map<UUId, Set<TopicIds>> = new Map()
     const registeredQueries: Map<UUId, IQueryRegister> = new Map()
     const registeredSubjects: Map<UUId, Subject<AllOutputs>> = new Map()
     const registeredOutputs: Map<UUId, Observable<AllOutputs>> = new Map()
 
-    function makeSubscription(uuid: UUId) {
-        return (cb: any) => {
-            const sub = registeredOutputs.get(uuid)!.subscribe(cb)
-            return () => {
-                sub.unsubscribe()
-                registeredSubjects.get(uuid)?.complete()
-                registeredQueries.delete(uuid)
-                registeredSubjects.delete(uuid)
-                registeredOutputs.delete(uuid)
-                const topics = UUIdToTopic.get(uuid)
-
-                topics?.forEach((tId) => {
-                    const removeUUId = topicToUUId.get(tId) || new Set()
-                    removeUUId.delete(uuid)
-                    topicToUUId.set(tId, new Set([...removeUUId]))
-                })
-                flux.updateQueries()
-            }
-        }
-    }
     return {
-        set flux(f: Flux) {
-            flux = f
-        },
         get registeredQueries() {
             return registeredQueries
         },
         get registeredSubjects() {
             return registeredSubjects
+        },
+        get ouputs() {
+            return [...registeredOutputs.values()]
+        },
+        getOutput(uuid: string) {
+            return registeredOutputs.get(uuid)
         },
         getRegisteredQueriesByTopic(tId: TopicIds) {
             if (topicToUUId.has(tId)) {
@@ -56,8 +37,17 @@ export const setupRegistry = () => {
             }
             return from(new Set<IQueryRegister>())
         },
-        registerQuery(q: IQuery) {
-            const uuid = v4()
+        makeSubscription(uuid: UUId) {
+            return (cb: any) => {
+                const sub = registeredOutputs.get(uuid)!.subscribe(cb)
+                return () => {
+                    sub.unsubscribe()
+                    this.unregisterQuery(uuid)
+                }
+            }
+        },
+
+        registerQuery(q: IQuery, uuid = v4()) {
             const data: TopicConfig = topicMap[q.topicId]
             const assetIds = new Set(q.assetId2)
             const topicIds = new Set([q.topicId])
@@ -79,7 +69,30 @@ export const setupRegistry = () => {
             )
             registeredOutputs.set(uuid, output$)
             registeredSubjects.set(uuid, sub)
-            return makeSubscription(uuid)
+            if (command) command.next({ name: 'updateQueries' })
+            return uuid
+        },
+        unregisterQuery(uuid: string) {
+            registeredSubjects.get(uuid)?.complete()
+            registeredQueries.delete(uuid)
+            registeredSubjects.delete(uuid)
+            registeredOutputs.delete(uuid)
+            const topics = UUIdToTopic.get(uuid)
+
+            topics?.forEach((tId) => {
+                const removeUUId = topicToUUId.get(tId) || new Set()
+                removeUUId.delete(uuid)
+                topicToUUId.set(tId, new Set([...removeUUId]))
+            })
+            if (command) command.next({ name: 'updateQueries' })
+        },
+        clear() {
+            topicToUUId.clear()
+            UUIdToTopic.clear()
+            registeredQueries.clear()
+            registeredSubjects.clear()
+            registeredOutputs.clear()
+            if (command) command.next({ name: 'terminate' })
         },
     }
 }
